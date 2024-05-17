@@ -3,8 +3,8 @@ import random
 import matplotlib.pyplot as plt
 
 # 그리드 크기
-grid_size_x = 10
-grid_size_y = 10
+grid_size_x = 3
+grid_size_y = 3
 
 # Q-테이블 초기화
 Q = np.zeros((grid_size_x, grid_size_y, 4))  # 각 상태에서 4가지 행동 (상, 하, 좌, 우)
@@ -21,28 +21,43 @@ episodes = 1000  # 학습 에피소드 수
 
 start_point = (0, 0)
 goal_point = (grid_size_x-1,grid_size_y-1)
-# must_pass = [(1, 2),(4,5),(6,2),(8,7)] 
-# must_avoid = [(0, 1),(3,5),(6,1),(7,6)]
+must_pass = [(1, 2)] 
+must_avoid = [(0, 1)]
 # must_pass=[]
-must_avoid=[]
-for i in range(8):
-    # must_pass.append((random.randint(0,9),random.randint(0,9)))
-    must_avoid.append((random.randint(0,9),random.randint(0,9)))
-    if i>1:
-        for j in range(i):
-            if(must_avoid[j]==must_avoid[i]):
-                i-=1
-    print(must_avoid)
+# must_avoid=[]
+# random_xy=[]
+# random_cnt=4
+# cnt=0
+# while cnt<random_cnt*2:
+#     x=random.randint(0,grid_size_x-1)
+#     y=random.randint(0,grid_size_y-1)
+#     if cnt==0:
+#         random_xy.append((x,y))
+#         cnt+=1
+#     else:
+#         for i in range(cnt):
+#             if(random_xy[i]==(x,y)):
+#                 cnt-=1
+#             else:
+#                 if(i==cnt-1):
+#                     random_xy.append((x,y))
+#                     cnt+=1
+# print(random_xy)
+# for i in range(random_cnt*2):
+#     if(i<random_cnt):
+#         must_pass.append(random_xy[i])
+#     else:
+#         must_avoid.append(random_xy[i])
 
 # 보상 테이블 초기화
 R = np.full((grid_size_x, grid_size_y), -50)
 # np.full = 지정된 크기의 배열을 생성하고 모든 요소를 특정 값으로 채우는 함수. -1.
 # -1로 채우는 이유는 목표에 도달하기 위해 불필요한 행동을 줄이기 위해.
-R[goal_point] = 20000  # 도착점 보상
-# for i in range(len(must_pass)):
-#     R[must_pass[i]] = 3000  # 반드시 지나야 할 점 보상
+R[goal_point] = 10000  # 도착점 보상
+for i in range(len(must_pass)):
+    R[must_pass[i]] = 1000  # 반드시 지나야 할 점 보상
 for j in range(len(must_avoid)):
-    R[must_avoid[j]] = -20000  # 가지 말아야 할 점 페널티
+    R[must_avoid[j]] = -200000  # 가지 말아야 할 점 페널티
 
 
 # 가능한 행동 정의
@@ -130,8 +145,8 @@ ax.set_yticklabels([])
 ax.grid(True)
 
 # 꼭 지나야 할 점과 가지 말아야 할 점 표시
-# for i in range(len(must_pass)):
-#     ax.add_patch(plt.Rectangle((must_pass[i][1], must_pass[i][0]), 1, 1, color='blue', alpha=0.5))
+for i in range(len(must_pass)):
+    ax.add_patch(plt.Rectangle((must_pass[i][1], must_pass[i][0]), 1, 1, color='blue', alpha=0.5))
 for j in range(len(must_avoid)):
     ax.add_patch(plt.Rectangle((must_avoid[j][1], must_avoid[j][0]), 1, 1, color='red', alpha=0.5))
 
