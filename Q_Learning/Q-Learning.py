@@ -3,8 +3,8 @@ import random
 import matplotlib.pyplot as plt
 
 # 그리드 크기
-grid_size_x = 3
-grid_size_y = 3
+grid_size_x = 20
+grid_size_y = 20
 
 # Q-테이블 초기화
 Q = np.zeros((grid_size_x, grid_size_y, 4))  # 각 상태에서 4가지 행동 (상, 하, 좌, 우)
@@ -21,8 +21,8 @@ episodes = 1000  # 학습 에피소드 수
 
 start_point = (0, 0)
 goal_point = (grid_size_x-1,grid_size_y-1)
-must_pass = [(1, 2)] 
-must_avoid = [(0, 1)]
+# must_pass = [(1, 2)] 
+must_avoid = [(9, 8), (3, 6), (8, 2), (15, 9), (13, 18), (18, 13), (2, 8), (14, 8), (4, 18), (12, 10), (4, 10), (4, 11), (18, 3), (3, 2), (5, 11), (19, 3), (15, 4), (9, 12), (13, 16), (14, 3), (14, 7), (1, 1), (4, 2), (14, 17), (19, 8), (1, 11), (13, 19), (2, 17), (11, 15), (0, 11), (19, 4), (10, 10), (13, 12), (19, 18), (10, 1), (18, 15), (13, 3), (4, 6), (6, 6), (5, 12), (5, 16), (19, 10), (9, 10), (15, 17), (5, 15), (2, 3), (5, 18), (3, 7), (1, 13), (4, 15)]
 # must_pass=[]
 # must_avoid=[]
 # random_xy=[]
@@ -54,8 +54,8 @@ R = np.full((grid_size_x, grid_size_y), -50)
 # np.full = 지정된 크기의 배열을 생성하고 모든 요소를 특정 값으로 채우는 함수. -1.
 # -1로 채우는 이유는 목표에 도달하기 위해 불필요한 행동을 줄이기 위해.
 R[goal_point] = 10000  # 도착점 보상
-for i in range(len(must_pass)):
-    R[must_pass[i]] = 1000  # 반드시 지나야 할 점 보상
+# for i in range(len(must_pass)):
+#     R[must_pass[i]] = 1000  # 반드시 지나야 할 점 보상
 for j in range(len(must_avoid)):
     R[must_avoid[j]] = -200000  # 가지 말아야 할 점 페널티
 
@@ -115,7 +115,10 @@ visited_states = set()
 visited_states.add(state)
 optimal_path = [state]
 while state != goal_point:
-    sorted_actions = np.argsort(Q[state[0], state[1]])[::-1] 
+    # 갔던 경로는 못가게 방지
+    #np.argsort()[::1] : 가장 가치가 높은 행동을 오름차순으로 정렬.
+    sorted_actions = np.argsort(Q[state[0], state[1]])[::-1]
+
     for action_index in sorted_actions:
         action = actions[action_index]
         next_s = next_state(state, action)
@@ -127,6 +130,7 @@ while state != goal_point:
             break
     else:
         break
+print(f"최적 경로 : {optimal_path}")
 
 # 그리드 생성
 fig, ax = plt.subplots()
@@ -145,15 +149,15 @@ ax.set_yticklabels([])
 ax.grid(True)
 
 # 꼭 지나야 할 점과 가지 말아야 할 점 표시
-for i in range(len(must_pass)):
-    ax.add_patch(plt.Rectangle((must_pass[i][1], must_pass[i][0]), 1, 1, color='blue', alpha=0.5))
+# for i in range(len(must_pass)):
+#     ax.add_patch(plt.Rectangle((must_pass[i][1], must_pass[i][0]), 1, 1, color='blue', alpha=0.5))
 for j in range(len(must_avoid)):
     ax.add_patch(plt.Rectangle((must_avoid[j][1], must_avoid[j][0]), 1, 1, color='red', alpha=0.5))
 
 # 각 셀에 좌표 표시
 for x in range(grid_size_x):
     for y in range(grid_size_y):
-        ax.text(y + 0.5, x + 0.5, f'({x},{y})', ha='center', va='center')
+        ax.text(y + 0.5, x + 0.5, f'({x},{y})', ha='center', va='center', fontsize=5)
 
 # 시작점과 도착점 표시
 ax.text(start_point[1] + 0.1, start_point[0] + 1 - 0.1, 'Start', ha='left', va='bottom', fontweight='bold', fontsize=12, color='blue', zorder=10)
