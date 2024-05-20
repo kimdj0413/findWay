@@ -86,10 +86,13 @@ def compute_loss(batch, model, target_model, gamma):
     q_value = q_values.gather(1, action.unsqueeze(1)).squeeze(1)
     # 다음 상태의 최대 Q 값의 인덱스를 제외하고 값만 추출
     next_q_value = next_q_values.max(1)[0]
-    # 실제 목표 Q 값을 계산
+    # 목표 Q 값을 계산(미래 보상)
     # 1-done은 에피소드가 종료되지 않은 경우에만 다음 Q 값 고려하게함.
     expected_q_value = reward + gamma * next_q_value * (1 - done)
 
+    # 손실 값 계산
+    # .detach() : 역전파 중에 expected_q_value가 업데이트되지 않게함.
+    # .pow(2).mean() : 제곱 후 제곱 오차의 평균을 구함.
     loss = (q_value - expected_q_value.detach()).pow(2).mean()
     return loss
     
@@ -97,10 +100,18 @@ env_shape = (grid_size, grid_size)
 input_dim = grid_size * grid_size
 output_dim = len(actions)
 
+# 현재 정책을 나타내는 신경망. 즉, agent가 현재 상태에서 취해야 할 행동을 결정.
 policy_net = DQN(input_dim, output_dim)
+# 목표 정책을 나타내는 신경망. 고정된 목표.
 target_net = DQN(input_dim, output_dim)
+# policy_net의 가중치를 target_net에 복사함. 초기에는 같은 값을 가짐.
+# .state_dict() : policy_net의 모든 가중치와 편향 값을 딕셔너리로 전환.
 target_net.load_state_dict(policy_net.state_dict())
+# .eval() : target_net을 평가 모드로 전환(드롭아웃이 비활성화 되고 출력이 일관.)
 target_net.eval()
+## target_net은 최신 policy_net의 상태를 반영.
+## target은 일정한 주기마다 업데이트, policy는 매 스텝마다 업데이트.
+## 학습의 안정성을 높이기 위해.
 
 optimizer = optim.Adam(policy_net.parameters())
 replay_buffer = ReplayBuffer(10000)
