@@ -5,19 +5,22 @@ import torch.optim as optim
 import random
 from collections import deque
 
-grid_size = 5
+grid_size = 20
 
-alpha = 0.1
+alpha = 0.5
 gamma = 0.9
 epsilon = 0.7
 episodes = 1000
 batch_size = 64
 target_update = 10
 
-R = np.full((grid_size, grid_size), -10)
-R[4,4] = 1000
-R[0, 1] = -10000
-R[2, 3] = -10000
+R = np.full((grid_size, grid_size), -50)
+R[grid_size-1,grid_size-1] = 10000
+must_avoid = [(9, 8), (3, 6), (8, 2), (15, 9), (13, 18), (18, 13), (2, 8), (14, 8), (4, 18), (12, 10), (4, 10), (4, 11), (18, 3), (3, 2), (5, 11), (19, 3), (15, 4), (9, 12), (13, 16), (14, 3), (14, 7), (1, 1), (4, 2), (14, 17), (19, 8), (1, 11), (13, 19), (2, 17), (11, 15), (0, 11), (19, 4), (10, 10), (13, 12), (19, 18), (10, 1), (18, 15), (13, 3), (4, 6), (6, 6), (5, 12), (5, 16), (19, 10), (9, 10), (15, 17), (5, 15), (2, 3), (5, 18), (3, 7), (1, 13), (4, 15)]
+for j in range(len(must_avoid)):
+    R[must_avoid[j]] = -200000
+# R[0, 1] = -10000
+# R[2, 3] = -10000
 actions = ["up", "down", "left", "right"]
 
 def next_state(state, action):
@@ -39,9 +42,9 @@ class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
         self.fc = nn.Sequential(
-            nn.Linear(input_dim, 128),  #128개의 뉴런을 가진 선형층
+            nn.Linear(input_dim, 64),  #128개의 뉴런을 가진 선형층
             nn.ReLU(),  # 활성화 함수
-            nn.Linear(128, 128),
+            nn.Linear(64, 128),
             nn.ReLU(),
             nn.Linear(128, output_dim)
         )
@@ -113,15 +116,22 @@ target_net.eval()
 ## target은 일정한 주기마다 업데이트, policy는 매 스텝마다 업데이트.
 ## 학습의 안정성을 높이기 위해.
 
+# 최적화 알고리즘 : adam은 경사하강법 기반의 최적화 알고리즘.
+# policy_net.parameters() : 학습 가능한 파라미터(가중치, 편향)들을 전부 반환.
 optimizer = optim.Adam(policy_net.parameters())
 replay_buffer = ReplayBuffer(10000)
+
+# 에피소드마다 최대 스텝 수 설정
+max_steps_per_episode = 1000
 
 for episode in range(episodes):
     state = (0, 0)
     state_one_hot = np.zeros(input_dim)
     state_one_hot[state[0] * grid_size + state[1]] = 1
     total_reward = 0
-    while state != (4, 4):
+    steps = 0  # 스텝 카운터 초기화
+    
+    while state != (grid_size-1, grid_size-1) and steps < max_steps_per_episode:
         if np.random.rand() < epsilon:
             action = np.random.choice(len(actions))
         else:
@@ -132,12 +142,13 @@ for episode in range(episodes):
         next_state_one_hot = np.zeros(input_dim)
         next_state_one_hot[next_state_[0] * grid_size + next_state_[1]] = 1
         reward = R[next_state_]
-        done = 1 if next_state_ == (4, 4) else 0
+        done = 1 if next_state_ == (grid_size-1, grid_size-1) else 0
 
         replay_buffer.push(state_one_hot, action, reward, next_state_one_hot, done)
         state = next_state_
         state_one_hot = next_state_one_hot
         total_reward += reward
+        steps += 1  # 스텝 카운트 증가
 
         if len(replay_buffer) >= batch_size:
             batch = replay_buffer.sample(batch_size)
@@ -149,13 +160,18 @@ for episode in range(episodes):
     if episode % target_update == 0:
         target_net.load_state_dict(policy_net.state_dict())
 
-    print(f"Episode {episode}, Total Reward: {total_reward}")
+    print(f"Episode {episode}, Total Reward: {total_reward}, Steps: {steps}")
+
+    # 무한 루프 방지를 위한 경고 메시지
+    if steps >= max_steps_per_episode:
+        print(f"Warning: Episode {episode} reached max steps without termination.")
+
 
 state = (0, 0)
 state_one_hot = np.zeros(input_dim)
 state_one_hot[state[0] * grid_size + state[1]] = 1
 optimal_path = [state]
-while state != (4, 4):
+while state != (grid_size-1, grid_size-1):
     with torch.no_grad():
         action = policy_net(torch.FloatTensor(state_one_hot)).argmax().item()
     state = next_state(state, actions[action])

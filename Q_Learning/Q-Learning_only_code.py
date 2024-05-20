@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 # 그리드 크기
 grid_size_x = 20
-grid_size_y = 20
+grid_size_y = 25
 
 # Q-테이블 초기화
 Q = np.zeros((grid_size_x, grid_size_y, 4))
@@ -55,7 +55,7 @@ for episode in range(episodes):
             reward + gamma * np.max(Q[next_state_[0], next_state_[1]]) - Q[state[0], state[1], actions.index(action)])
 
         state = next_state_
-        print(f"Episode: {episode}, State: {state}, Action: {action}, Reward: {reward}")
+    print(f"Episode: {episode}, Reward: {reward}")
 
 # 최적 경로 찾기
 state = (0, 0)
@@ -72,10 +72,10 @@ while state != goal_point:
             state = next_s
             optimal_path.append(state)
             visited_states.add(state)
-            print(f"State: {state}, Action: {action}")
             break
     else:
         break
+    print(f"State: {state}, Action: {action}")
 print(f"최적 경로 : {optimal_path}")
 
 # 그리드 생성
