@@ -32,12 +32,15 @@ def next_state(state, action):
         j = min(j + 1, grid_size - 1)
     return i, j
 
+# 파이토치 nn.Module 상속
+# 상속법은 __init__와 forward를 오버라이딩
+# input_dim은 state, output_dim은 action
 class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
         self.fc = nn.Sequential(
-            nn.Linear(input_dim, 128),
-            nn.ReLU(),
+            nn.Linear(input_dim, 128),  #128개의 뉴런을 가진 선형층
+            nn.ReLU(),  # 활성화 함수
             nn.Linear(128, 128),
             nn.ReLU(),
             nn.Linear(128, output_dim)
@@ -45,15 +48,20 @@ class DQN(nn.Module):
 
     def forward(self, x):
         return self.fc(x)
-    
+
+# 경험 재현 메모리 생성
+# 에이전트가 경험한 상태, 행동, 보상, 다음상태, 종료여부 저장 후 랜덤하게 샘플링    
 class ReplayBuffer:
+    # deque는 collection. 가장 오래된 항목 제거
     def __init__(self, capacity):
         self.buffer = deque(maxlen=capacity)
-
+    # 튜플 형태로 경험 저장
     def push(self, state, action, reward, next_state, done):
         self.buffer.append((state, action, reward, next_state, done))
-
+    # batch_size는 샘플링 할 경험의 수
     def sample(self, batch_size):
+        # random.sample로 buffer내에서 batch_size만큼 랜덤하게 선택해 리스트로 만듬
+        # zip : *는 언패킹 연산자. 리스트의 요소들을 개별적인 인자로 전달해 요소별로 튜플을 만듬.
         state, action, reward, next_state, done = zip(*random.sample(self.buffer, batch_size))
         return np.array(state), action, reward, np.array(next_state), done
 
@@ -61,6 +69,7 @@ class ReplayBuffer:
         return len(self.buffer)
     
 def compute_loss(batch, model, target_model, gamma):
+    # 데이터 타입을 텐서로 변환 -> PyTorch의 기본 데이터 구조는 텐서.(넘파이와 유사.)
     state, action, reward, next_state, done = batch
     state = torch.FloatTensor(state)
     next_state = torch.FloatTensor(next_state)
@@ -70,8 +79,15 @@ def compute_loss(batch, model, target_model, gamma):
 
     q_values = model(state)
     next_q_values = target_model(next_state)
+    # 현재 Q값 추출
+    # action.unsqueeze(1) : 1차원 action을 2차원으로 변환
+    # gather(1, index) : 각 index에 해당하는 q values의 해당 열의 값을 추출.
+    # squeeze : 다시 1차원으로 축소
     q_value = q_values.gather(1, action.unsqueeze(1)).squeeze(1)
+    # 다음 상태의 최대 Q 값의 인덱스를 제외하고 값만 추출
     next_q_value = next_q_values.max(1)[0]
+    # 실제 목표 Q 값을 계산
+    # 1-done은 에피소드가 종료되지 않은 경우에만 다음 Q 값 고려하게함.
     expected_q_value = reward + gamma * next_q_value * (1 - done)
 
     loss = (q_value - expected_q_value.detach()).pow(2).mean()
