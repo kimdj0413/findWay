@@ -40,7 +40,7 @@ losses = []
 for i in range(epochs):
     # 노이즈 추가 및 1차원 배열로 데이터 변환.
     game = Gridworld(size=4, mode='static')
-    state_ = game.board.render_np().reshape(1,l1) + np.random.rand(1,l1)/10.0
+    state_ = game.board.render_np().reshape(1,64) + np.random.rand(1,64)/10.0
     state1 = torch.from_numpy(state_).float()
     status = 1
 
@@ -54,6 +54,7 @@ for i in range(epochs):
 
         action = action_set[action_]
         game.makeMove(action)
+        print(f"game : {game.display()}, action : {action}")
         state2_ = game.board.render_np().reshape(1,64) + np.random.rand(1,64)/10.0
         state2 = torch.from_numpy(state2_).float()
         reward = game.reward()
@@ -67,9 +68,7 @@ for i in range(epochs):
             Y = reward
 
         Y = torch.Tensor([Y]).detach()
-        print(f"Y : {Y}")
         X = qval.squeeze()[action_] #O
-        print(f"X : {X}")
         loss = loss_fn(X, Y) # X : target, Y : Predict
         print(i, loss.item())
        #clear_output(wait=True)
