@@ -1,27 +1,37 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+import time
+import datetime
 
+start = time.time()
 # 그리드 크기
-grid_size_x = 20
-grid_size_y = 25
+grid_size_x = 100
+grid_size_y = 100
 
 # Q-테이블 초기화
 Q = np.zeros((grid_size_x, grid_size_y, 4))
 alpha = 0.5
 gamma = 0.9  
 epsilon = 0.7
-episodes = 1000
+episodes = 10000
 
 start_point = (0, 0)
 goal_point = (grid_size_x-1,grid_size_y-1)
-must_avoid = [(9, 8), (3, 6), (8, 2), (15, 9), (13, 18), (18, 13), (2, 8), (14, 8), (4, 18), (12, 10), (4, 10), (4, 11), (18, 3), (3, 2), (5, 11), (19, 3), (15, 4), (9, 12), (13, 16), (14, 3), (14, 7), (1, 1), (4, 2), (14, 17), (19, 8), (1, 11), (13, 19), (2, 17), (11, 15), (0, 11), (19, 4), (10, 10), (13, 12), (19, 18), (10, 1), (18, 15), (13, 3), (4, 6), (6, 6), (5, 12), (5, 16), (19, 10), (9, 10), (15, 17), (5, 15), (2, 3), (5, 18), (3, 7), (1, 13), (4, 15)]
-
+# must_avoid = [(9, 8), (3, 6), (8, 2), (15, 9), (13, 18), (18, 13), (2, 8), (14, 8), (4, 18), (12, 10), (4, 10), (4, 11), (18, 3), (3, 2), (5, 11), (19, 3), (15, 4), (9, 12), (13, 16), (14, 3), (14, 7), (1, 1), (4, 2), (14, 17), (19, 8), (1, 11), (13, 19), (2, 17), (11, 15), (0, 11), (19, 4), (10, 10), (13, 12), (19, 18), (10, 1), (18, 15), (13, 3), (4, 6), (6, 6), (5, 12), (5, 16), (19, 10), (9, 10), (15, 17), (5, 15), (2, 3), (5, 18), (3, 7), (1, 13), (4, 15)]
+must_avoid=[]
+random_cnt=2000
+while len(must_avoid) < random_cnt:
+    x = random.randint(0, grid_size_x-1)
+    y = random.randint(0, grid_size_y-1)
+    
+    if ((x, y) not in must_avoid) or ((x,y) != (0,0)) or ((x,y) != (grid_size_x,grid_size_y)):
+        must_avoid.append((x, y))
 # 보상 테이블 초기화
-R = np.full((grid_size_x, grid_size_y), -50)
-R[goal_point] = 10000
-for j in range(len(must_avoid)):
-    R[must_avoid[j]] = -200000
+R = np.full((grid_size_x, grid_size_y), -5)
+R[goal_point] = 1000000
+for i in must_avoid:
+    R[i] = -1000000
 
 # 가능한 행동 정의
 actions = ["up", "down", "left", "right"]
@@ -57,6 +67,11 @@ for episode in range(episodes):
         state = next_state_
     print(f"Episode: {episode}, Reward: {reward}")
 
+sec = time.time()-start
+times = str(datetime.timedelta(seconds=sec))
+short = times.split(".")[0]
+print(f"{short} sec")
+
 # 최적 경로 찾기
 state = (0, 0)
 visited_states = set()
@@ -79,7 +94,7 @@ while state != goal_point:
 print(f"최적 경로 : {optimal_path}")
 
 # 그리드 생성
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(20, 20))
 
 # 그리드 라인 그리기
 for x in range(grid_size_x + 1):
@@ -115,4 +130,5 @@ for i in range(len(optimal_path) - 1):
 
 plt.gca().invert_yaxis()
 plt.axis('equal')
+plt.savefig("grid_plot.svg", format="svg")
 plt.show()

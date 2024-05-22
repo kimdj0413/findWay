@@ -11,12 +11,12 @@ action_set = {
     3: 'r',
 }
 
-grid_size_x = 5
-grid_size_y = 5
+grid_size_x = 100
+grid_size_y = 100
+random_cnt = 3000
 gamma = 0.9
 epsilon = 1.0
 epochs = 1000
-batch_size = 32
 losses = []
 l1= grid_size_x*grid_size_y*3
 l2 = 256
@@ -24,7 +24,14 @@ l3 = 128
 l4 = 4
 start=(0,0)
 goal=(grid_size_x-1,grid_size_y-1)
-avoid = (0,3),(1,1),(2,1),(2,3)#,(1,5),(2,5),(3,0),(3,7),(4,4),(5,1),(5,3),(6,6),(7,2),(7,4)
+# avoid = (0,3),(1,1),(2,1),(2,3),(1,5),(2,5),(3,0),(3,7),(4,4),(5,1),(5,3),(6,6),(7,2),(7,4)
+avoid = []
+while len(avoid) < random_cnt:
+    x = random.randint(0, grid_size_x-1)
+    y = random.randint(0, grid_size_y-1)
+    
+    if ((x, y) not in avoid) or ((x,y) != (0,0)) or ((x,y) != (grid_size_x,grid_size_y)):
+        avoid.append((x, y))
 
 model = torch.nn.Sequential(
         torch.nn.Linear(l1,l2),

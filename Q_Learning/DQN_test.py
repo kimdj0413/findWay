@@ -15,16 +15,27 @@ grid_size_x = 5
 grid_size_y = 5
 gamma = 0.9
 epsilon = 1.0
-epochs = 1000
+epochs = 2000
 batch_size = 32
+random_cnt = 5
 losses = []
 l1= grid_size_x*grid_size_y*3
-l2 = 256
-l3 = 128
+l2 = 32
+l3 = 16
 l4 = 4
+# l5 = 512
+# l6 = 128
+# l7 = 4
 start=(0,0)
 goal=(grid_size_x-1,grid_size_y-1)
-avoid = (0,3),(1,1),(2,1),(2,3)#,(1,5),(2,5),(3,0),(3,7),(4,4),(5,1),(5,3),(6,6),(7,2),(7,4)
+# avoid = (0,3),(1,1),(2,1),(2,3),(1,5),(2,5),(3,0),(3,7),(4,4),(5,1),(5,3),(6,6),(7,2),(7,4)
+avoid = []
+while len(avoid) < random_cnt:
+    x = random.randint(0, grid_size_x-1)
+    y = random.randint(0, grid_size_y-1)
+    
+    if ((x, y) not in avoid) or ((x,y) != (0,0)) or ((x,y) != (grid_size_x,grid_size_y)):
+        avoid.append((x, y))
 
 model = torch.nn.Sequential(
         torch.nn.Linear(l1,l2),
@@ -32,6 +43,12 @@ model = torch.nn.Sequential(
         torch.nn.Linear(l2,l3),
         torch.nn.ReLU(),
         torch.nn.Linear(l3,l4)
+        # torch.nn.ReLU(),
+        # torch.nn.Linear(l4,l5),
+        # torch.nn.ReLU(),
+        # torch.nn.Linear(l5,l6),
+        # torch.nn.ReLU(),
+        # torch.nn.Linear(l6,l7)
 )
 
 loss_fn = torch.nn.MSELoss()
@@ -86,10 +103,13 @@ def reward_state(current_state):
 
 current_state=(0,start[0],start[1])
 num_cnt=[]
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = model.to(device)
 
 for i in range(epochs):
     game = gridMake(grid_size_x, grid_size_y,start,goal,avoid)
     state1 = stateMake(grid_size_x, grid_size_y)
+    state1 = torch.tensor(state1, dtype=torch.float32).to(device)
     status=1
 
     while(status==1):
@@ -102,7 +122,7 @@ for i in range(epochs):
         reward = reward_state(current_state)
         current_state = next_state
         qval = model(state1)
-        qval_ = qval.detach().numpy()
+        qval_ = qval.detach().cpu().numpy()
         with torch.no_grad():
             newQ = model(state1)
         maxQ = torch.max(newQ)
@@ -111,7 +131,7 @@ for i in range(epochs):
         else:
             Y = reward
 
-        Y = torch.Tensor([Y]).detach()
+        Y = torch.tensor([Y], device=device, dtype=torch.float32).detach()
         X = qval.squeeze()[action_]
         loss = loss_fn(X, Y)
         print(i, loss.item())
@@ -137,12 +157,13 @@ def find_optimal_path(model, start, goal, grid_size_x, grid_size_y, avoid):
     
     while current_state[1:3] != goal:
         state1 = stateMake(grid_size_x, grid_size_y)
+        state1 = torch.FloatTensor(state1).to(device)
         qval = model(state1)
         action_ = torch.argmax(qval).item()
         
         next_state1, next_current_state = gridMove(current_state, state1, action_set[action_])
         if next_current_state[1:3] in visited or (next_current_state[1], next_current_state[2]) in avoid:
-            action_values = qval.detach().numpy().squeeze()
+            action_values = qval.detach().cpu().numpy().squeeze()
             sorted_actions = np.argsort(action_values)[::-1]
             
             for action_idx in sorted_actions:
@@ -199,7 +220,7 @@ for j in range(len(avoid)):
 
 for x in range(grid_size_x):
     for y in range(grid_size_y):
-        ax1.text(y + 0.5, x + 0.5, f'({x},{y})', ha='center', va='center', fontsize=10)
+        ax1.text(y + 0.5, x + 0.5, f'({x},{y})', ha='center', va='center', fontsize=0.5)
 
 ax1.text(start[1] + 0.1, start[0] + 1 - 0.1, 'Start', ha='left', va='bottom', fontweight='bold', fontsize=12, color='blue', zorder=10)
 ax1.text(goal[1] + 0.1, goal[0] + 1 - 0.1, 'Goal', ha='left', va='bottom', fontweight='bold', fontsize=12, color='red', zorder=10)

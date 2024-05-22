@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 grid_size = 5
 
@@ -11,8 +12,10 @@ episodes = 1000
 
 R = np.full((grid_size, grid_size), -10)
 R[4,4] = 1000
-R[0, 1] = -10000
-R[2, 3] = -10000
+avoid = [(0,1),(2,3)]
+for i in avoid:
+    R[i] = -10000
+print(R)    
 actions = ["up", "down", "left", "right"]
 
 def next_state(state, action):
