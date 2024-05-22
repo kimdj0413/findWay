@@ -3,7 +3,10 @@ import numpy as np
 import torch
 import random
 from matplotlib import pylab as plt
+import time
+import datetime
 
+start_time = time.time()
 action_set = {
     0: 'u',
     1: 'd',
@@ -15,27 +18,29 @@ grid_size_x = 5
 grid_size_y = 5
 gamma = 0.9
 epsilon = 1.0
-epochs = 2000
+epochs = 10000
 batch_size = 32
-random_cnt = 5
+random_cnt = 3
 losses = []
 l1= grid_size_x*grid_size_y*3
-l2 = 32
+l2 = 64
 l3 = 16
 l4 = 4
-# l5 = 512
-# l6 = 128
+# l5 = 4
+# l6 = 4
 # l7 = 4
 start=(0,0)
 goal=(grid_size_x-1,grid_size_y-1)
-# avoid = (0,3),(1,1),(2,1),(2,3),(1,5),(2,5),(3,0),(3,7),(4,4),(5,1),(5,3),(6,6),(7,2),(7,4)
 avoid = []
 while len(avoid) < random_cnt:
     x = random.randint(0, grid_size_x-1)
     y = random.randint(0, grid_size_y-1)
     
-    if ((x, y) not in avoid) or ((x,y) != (0,0)) or ((x,y) != (grid_size_x,grid_size_y)):
+    if ((x, y) not in avoid) and ((x,y) != (0,0)) and ((x,y) != (grid_size_x-1,grid_size_y-1)):
         avoid.append((x, y))
+
+print(avoid)
+input("Enter")
 
 model = torch.nn.Sequential(
         torch.nn.Linear(l1,l2),
@@ -44,9 +49,9 @@ model = torch.nn.Sequential(
         torch.nn.ReLU(),
         torch.nn.Linear(l3,l4)
         # torch.nn.ReLU(),
-        # torch.nn.Linear(l4,l5),
+        # torch.nn.Linear(l4,l5)
         # torch.nn.ReLU(),
-        # torch.nn.Linear(l5,l6),
+        # torch.nn.Linear(l5,l6)
         # torch.nn.ReLU(),
         # torch.nn.Linear(l6,l7)
 )
@@ -54,15 +59,6 @@ model = torch.nn.Sequential(
 loss_fn = torch.nn.MSELoss()
 learning_rate = 1e-3
 optimizer  = torch.optim.Adam(model.parameters(),lr = learning_rate)
-
-# GridMake
-def gridMake(grid_size_x, grid_size_y, start, goal, avoid):
-        game = np.full((grid_size_x, grid_size_y), " ")
-        game[start] = 'S'
-        game[goal] = 'G'
-        for pos in avoid:
-            game[pos] = 'X'
-        return game
 
 # stateMake
 def stateMake(grid_size_x, grid_size_y):
@@ -95,7 +91,7 @@ def gridMove(current_state, state1, action):
 
 def reward_state(current_state):
     if current_state==(0, goal[0], goal[1]):
-        return 100
+        return 3000
     elif (current_state[1], current_state[2]) in avoid:
         return -1000
     else:
@@ -105,12 +101,17 @@ current_state=(0,start[0],start[1])
 num_cnt=[]
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
+# loss_cnt = deque(maxlen=100)
 
 for i in range(epochs):
-    game = gridMake(grid_size_x, grid_size_y,start,goal,avoid)
     state1 = stateMake(grid_size_x, grid_size_y)
     state1 = torch.tensor(state1, dtype=torch.float32).to(device)
     status=1
+    # if len(loss_cnt)>90:
+    #     loss_avg = sum(loss_cnt)/len(loss_cnt)
+    #     print(f"loss_avg{loss_avg}")
+    #     if loss_avg<10:
+    #         break
 
     while(status==1):
         if (random.random() < epsilon):
@@ -139,6 +140,7 @@ for i in range(epochs):
         loss.backward()
         optimizer.step()
         losses.append(loss.item())
+        # loss_cnt.append(loss.item())
         num_cnt.append(i)
         
         if reward != -10:
@@ -183,6 +185,10 @@ def find_optimal_path(model, start, goal, grid_size_x, grid_size_y, avoid):
     return path, action_path
 
 # 최적의 경로 탐색
+sec = time.time()-start_time
+times = str(datetime.timedelta(seconds=sec))
+short = times.split(".")[0]
+print(f"{short} sec")
 optimal_path, optiomal_action = find_optimal_path(model, start, goal, grid_size_x, grid_size_y, avoid)
 print("Optimal Path:", optimal_path)
 print("Optimal action:", optiomal_action)
@@ -220,7 +226,7 @@ for j in range(len(avoid)):
 
 for x in range(grid_size_x):
     for y in range(grid_size_y):
-        ax1.text(y + 0.5, x + 0.5, f'({x},{y})', ha='center', va='center', fontsize=0.5)
+        ax1.text(y + 0.5, x + 0.5, f'({x},{y})', ha='center', va='center', fontsize=10)
 
 ax1.text(start[1] + 0.1, start[0] + 1 - 0.1, 'Start', ha='left', va='bottom', fontweight='bold', fontsize=12, color='blue', zorder=10)
 ax1.text(goal[1] + 0.1, goal[0] + 1 - 0.1, 'Goal', ha='left', va='bottom', fontweight='bold', fontsize=12, color='red', zorder=10)

@@ -14,13 +14,13 @@ Q = np.zeros((grid_size_x, grid_size_y, 4))
 alpha = 0.5
 gamma = 0.9  
 epsilon = 0.7
-episodes = 10000
+episodes = 13000
 
 start_point = (0, 0)
 goal_point = (grid_size_x-1,grid_size_y-1)
 # must_avoid = [(9, 8), (3, 6), (8, 2), (15, 9), (13, 18), (18, 13), (2, 8), (14, 8), (4, 18), (12, 10), (4, 10), (4, 11), (18, 3), (3, 2), (5, 11), (19, 3), (15, 4), (9, 12), (13, 16), (14, 3), (14, 7), (1, 1), (4, 2), (14, 17), (19, 8), (1, 11), (13, 19), (2, 17), (11, 15), (0, 11), (19, 4), (10, 10), (13, 12), (19, 18), (10, 1), (18, 15), (13, 3), (4, 6), (6, 6), (5, 12), (5, 16), (19, 10), (9, 10), (15, 17), (5, 15), (2, 3), (5, 18), (3, 7), (1, 13), (4, 15)]
 must_avoid=[]
-random_cnt=2000
+random_cnt=3000
 while len(must_avoid) < random_cnt:
     x = random.randint(0, grid_size_x-1)
     y = random.randint(0, grid_size_y-1)
@@ -116,7 +116,7 @@ for j in range(len(must_avoid)):
 # 각 셀에 좌표 표시
 for x in range(grid_size_x):
     for y in range(grid_size_y):
-        ax.text(y + 0.5, x + 0.5, f'({x},{y})', ha='center', va='center', fontsize=5)
+        ax.text(y + 0.5, x + 0.5, f'({x},{y})', ha='center', va='center', fontsize=0.5)
 
 # 시작점과 도착점 표시
 ax.text(start_point[1] + 0.1, start_point[0] + 1 - 0.1, 'Start', ha='left', va='bottom', fontweight='bold', fontsize=12, color='blue', zorder=10)
