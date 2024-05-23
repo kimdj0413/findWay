@@ -133,10 +133,7 @@ def train(agent, env, num_episodes, batch_size):
 
             file.write(f'에피소드: {episode}, state: {state}, 보상: {reward}, Loss: {loss}\n')
             print(f'에피소드: {episode}, state: {state}, 보상: {reward}, Loss: {loss}')
-            if reward == 100:
-                print("Find!!!!!!!!!!!!!!!!!!!!!!!!")
-                time.sleep(5)
-
+           
 def save_model(model, file_name):
     torch.save(model.state_dict(), file_name)
 
