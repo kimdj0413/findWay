@@ -21,23 +21,23 @@ class GridWorld:
     def step(self, action):
         x, y = self.state
         if action == 0:   # 상
-            x = max(0, x - 1)
+            x = max(x - 1,0)
         elif action == 1: # 하
-            x = min(self.grid_size - 1, x + 1)
+            x = min(x + 1, self.grid_size - 1)
         elif action == 2: # 좌
-            y = max(0, y - 1)
+            y = max(y - 1,0)
         elif action == 3: # 우
-            y = min(self.grid_size - 1, y + 1)
+            y = min(y + 1,self.grid_size - 1)
 
         next_state = (x, y)
         if next_state in self.obstacles:
-            reward = -1
-            done = True
+            reward = -1000
+            done =True
         elif next_state == self.end_state:
-            reward = 1
+            reward =  1000
             done = True
         else:
-            reward = 0
+            reward = -5
             done = False
 
         self.state = next_state
@@ -95,6 +95,7 @@ class DQNAgent:
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        return loss.item()
 
     def select_action(self, state, epsilon):
         if random.random() < epsilon:
@@ -108,7 +109,7 @@ class DQNAgent:
 def train(agent, env, num_episodes, batch_size):
     for episode in range(num_episodes):
         state = env.reset()
-        epsilon = max(0.01, 0.08 - 0.01 * (episode / 200)) # Epsilon-greedy 정책
+        epsilon = 1-episode/num_episodes # max(0.01, 0.08 - 0.01 * (episode / 200))  Epsilon-greedy 정책
         done = False
 
         while not done:
@@ -117,9 +118,10 @@ def train(agent, env, num_episodes, batch_size):
             agent.replay_buffer.push(state, action, reward, next_state, done)
             state = next_state
             agent.update_model(batch_size)
+            loss = agent.update_model(batch_size)
 
-        if episode % 100 == 0:
-            print(f'에피소드: {episode}, 보상: {reward}')
+        # if episode % 100 == 0:
+        print(f'에피소드: {episode}, 보상: {reward}, Loss: {loss}')
 # 모델 저장 함수
 def save_model(model, file_name):
     torch.save(model.state_dict(), file_name)
@@ -133,14 +135,14 @@ def load_model(model, file_name):
 def find_optimal_path(env, agent, start_state):
     state = start_state
     optimal_path = [state]
+    action_path = []
     while state != env.end_state:
         action = agent.select_action(state, epsilon=0)  # 최적의 행동 선택
         next_state, _, done = env.step(action)
-        if done and next_state != env.end_state:  # 장애물에 부딪히면 종료
-            break
+        action_path.append(action)
         optimal_path.append(next_state)
         state = next_state
-    return optimal_path
+    return optimal_path, action_path
 
 # 메인
 input_size = 2 # 상태는 (x, y) 좌표
@@ -160,5 +162,6 @@ new_agent = DQNAgent(input_size, output_size, hidden_size)
 load_model(new_agent.model, 'dqn_model.pth')
     
     # 최적 경로 찾기
-optimal_path = find_optimal_path(env, new_agent, env.start_state)
+optimal_path, action_path = find_optimal_path(env, new_agent, env.start_state)
 print(f'최적의 경로: {optimal_path}')
+print(f'최적의 행동: {action_path}')
