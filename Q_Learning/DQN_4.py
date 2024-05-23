@@ -114,9 +114,7 @@ class DQNAgent:
         return np.argsort(q_values.detach().numpy().squeeze())[::1]
         
 def train(agent, env, num_episodes, batch_size):
-    if os.path.exists('training_log.txt'):
-        os.remove('training_log.txt')
-    with open('training_log.txt', 'a') as file:
+    with open('training_log.txt', 'w') as file:
         for episode in range(num_episodes):
             state = env.reset()
             epsilon = 1.0-episode/num_episodes
