@@ -4,12 +4,15 @@ from collections import deque
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import time
+import datetime
 
+start_time = time.time()
 class GridSetting:
     def __init__(self):
-        self.grid_size_x = 5
-        self.grid_size_y = 5
-        self.avoid = [(1,2),(0,3),(3,4)]
+        self.grid_size_x = 10
+        self.grid_size_y = 10
+        self.avoid = [(0,3),(1,1),(1,5),(1,8),(2,1),(2,3),(2,5),(3,0),(3,7),(4,4),(4,7),(4,9),(5,1),(5,3),(6,6),(6,9),(7,2),(7,4),(7,7),(8,1),(8,3),(9,2),(9,6)]
         self.start_state = (0,0)
         self.end_state = (self.grid_size_x-1,self.grid_size_y-1)
 
@@ -33,7 +36,7 @@ class GridSetting:
 
         if next_state in self.avoid:
             reward = -10
-            done =True
+            done = False
         elif next_state == self.end_state:
             reward =  100
             done = True
@@ -47,13 +50,6 @@ class QNetwork(nn.Module):
     def __init__(self, input_size, output_size):
         super(QNetwork, self).__init__()
         self.fc = nn.Linear(input_size, output_size)
-        # self.fc = nn.Sequential(
-        #     nn.Linear(100, 64),
-        #     nn.ReLU(),
-        #     nn.Linear(64,16),
-        #     nn.ReLU(),
-        #     nn.Linear(16,4)
-        # )
     def forward(self, state):
         return self.fc(state)
     
@@ -91,7 +87,6 @@ class DQNAgent:
         dones = torch.FloatTensor(dones)
 
         current_q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
-        # with torch.no_grad():
         next_q_values = self.model(next_states).max(1)[0]
         expected_q_values = rewards + self.gamma * next_q_values * (1 - dones)
 
@@ -122,7 +117,6 @@ def train(agent, env, num_episodes, batch_size):
             action = agent.select_action(state,epsilon)
             next_state, reward, done = env.move(state, action)
             agent.replay_buffer.push(state, action, reward, next_state, done)
-            # agent.update_model(batch_size)
             loss = agent.update_model(batch_size)
             state = next_state
             state_list.append(next_state)
@@ -153,17 +147,31 @@ def find_optimal_path(env, agent, start_state):
 
 input_size = 2
 output_size = 4
-hidden_size = 64
-batch_size = 32
-num_episodes = 3000
+hidden_size = 128
+batch_size = 64
+num_episodes = 30000
 
 env = GridSetting()
 agent = DQNAgent(input_size, output_size, hidden_size)
 train(agent, env, num_episodes, batch_size)
 
-save_model(agent.model, 'dqn_model.pth')
-new_agent = DQNAgent(input_size, output_size, hidden_size)
-load_model(new_agent.model, 'dqn_model.pth')
-optimal_path, action_path = find_optimal_path(env, new_agent, env.start_state)
-print(f'최적의 경로: {optimal_path}')
-print(f'최적의 행동: {action_path}')
+save_model(agent.model, 'dqn_test_model.pth')
+
+# action_set = {
+#     0: 'u',
+#     1: 'd',
+#     2: 'l',
+#     3: 'r',
+# }
+
+# env = GridSetting()
+# new_agent = DQNAgent(input_size, output_size, hidden_size)
+# load_model(new_agent.model, 'dqn_test_model.pth')
+
+# optimal_path, action_path= find_optimal_path(env, new_agent, env.start_state)
+# print(f'최적의 경로: {optimal_path,action_path}')
+
+sec = time.time()-start_time
+times = str(datetime.timedelta(seconds=sec))
+short = times.split(".")[0]
+print(f"{short} sec")

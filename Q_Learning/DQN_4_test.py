@@ -47,13 +47,6 @@ class QNetwork(nn.Module):
     def __init__(self, input_size, output_size):
         super(QNetwork, self).__init__()
         self.fc = nn.Linear(input_size, output_size)
-        # self.fc = nn.Sequential(
-        #     nn.Linear(100, 64),
-        #     nn.ReLU(),
-        #     nn.Linear(64,16),
-        #     nn.ReLU(),
-        #     nn.Linear(16,4)
-        # )
     def forward(self, state):
         return self.fc(state)
     
@@ -184,7 +177,7 @@ action_set = {
 
 env = GridSetting()
 new_agent = DQNAgent(input_size, output_size, hidden_size)
-load_model(new_agent.model, 'dqn_model.pth')
+load_model(new_agent.model, 'dqn_test_model.pth')
 
 optimal_path, action_path= find_optimal_path(env, new_agent, env.start_state)
 print(f'최적의 경로: {optimal_path,action_path}')
