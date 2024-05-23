@@ -109,6 +109,10 @@ class DQNAgent:
         else :
             q_values = self.model(state)
             return np.argmax(q_values.detach().numpy())
+    def sort_action(self, state):
+        state = torch.FloatTensor(state).unsqueeze(0)  # state를 tensor로 변환하고 배치 차원을 추가
+        q_values = self.model(state)
+        return np.argsort(q_values.detach().numpy().squeeze())[::1]
         
 def train(agent, env, num_episodes, batch_size):
     for episode in range(num_episodes):
@@ -136,20 +140,8 @@ def save_model(model, file_name):
 def load_model(model, file_name):
     model.load_state_dict(torch.load(file_name))
     model.eval()
-
-def find_optimal_path(env, agent, start_state):
-    state = start_state
-    optimal_path = [state]
-    action_path = []
-    done = False
-    while not done and state != env.end_state:
-        action = agent.select_action(state, epsilon=0)
-        next_state, _, done = env.move(action)
-        if not done:
-            action_path.append(action)
-            optimal_path.append(next_state)
-        state = next_state
-    return optimal_path, action_path
+    print(model)
+    return model
 
 input_size = 2
 output_size = 4
@@ -157,13 +149,42 @@ hidden_size = 64
 batch_size = 32
 num_episodes = 3000
 
-env = GridSetting()
-agent = DQNAgent(input_size, output_size, hidden_size)
-train(agent, env, num_episodes, batch_size)
+def find_optimal_path(env, agent, start_state):
+    visited = set()
+    state = start_state
+    optimal_path = [start_state]
+    action_path = []
+    
+    visited.add(state)
+    for i in range(0,len(env.avoid)):
+        visited.add(env.avoid[i])
+        print(visited)
+    while state != env.end_state:
+        action = agent.sort_action(state)
+        print(state)
+        for i in action:
+            next_state, _, done = env.move(state, i)
+            if next_state in visited:
+                continue
+            else:
+                optimal_path.append(next_state)
+                visited.add(next_state)
+                action_path.append(action_set[i])
+                state = next_state
+                break
+    optimal_path.append(env.end_state)
+    return optimal_path, action_path
 
-save_model(agent.model, 'dqn_model.pth')
+action_set = {
+    0: 'u',
+    1: 'd',
+    2: 'l',
+    3: 'r',
+}
+
+env = GridSetting()
 new_agent = DQNAgent(input_size, output_size, hidden_size)
 load_model(new_agent.model, 'dqn_model.pth')
-optimal_path, action_path = find_optimal_path(env, new_agent, env.start_state)
-print(f'최적의 경로: {optimal_path}')
-print(f'최적의 행동: {action_path}')
+
+optimal_path, action_path= find_optimal_path(env, new_agent, env.start_state)
+print(f'최적의 경로: {optimal_path,action_path}')
