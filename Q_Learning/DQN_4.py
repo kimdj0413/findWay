@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 import time
 import datetime
+import os
 
 start_time = time.time()
 class GridSetting:
@@ -13,6 +14,9 @@ class GridSetting:
         self.grid_size_x = 10
         self.grid_size_y = 10
         self.avoid = [(0,3),(1,1),(1,5),(1,8),(2,1),(2,3),(2,5),(3,0),(3,7),(4,4),(4,7),(4,9),(5,1),(5,3),(6,6),(6,9),(7,2),(7,4),(7,7),(8,1),(8,3),(9,2),(9,6)]
+        # self.grid_size_x = 5
+        # self.grid_size_y = 5
+        # self.avoid = [(0,1),(1,1),(1,3),(2,3),(3,0),(3,1),(3,2),(3,3),(3,4),(4,1),(4,2)]
         self.start_state = (0,0)
         self.end_state = (self.grid_size_x-1,self.grid_size_y-1)
 
@@ -20,7 +24,7 @@ class GridSetting:
         self.state = self.start_state
         return self.state
 
-    def move(self, state, action):
+    def move(self, state, action, reward):
         x,y = state
         if action == 0:   # 상
             x = max(x - 1,0)
@@ -32,16 +36,15 @@ class GridSetting:
             y = min(y + 1,self.grid_size_y - 1)
         
         next_state = (x,y)
-        reward = -1
 
         if next_state in self.avoid:
-            reward = -10
+            reward += -0.1
             done = False
         elif next_state == self.end_state:
-            reward =  100
+            reward +=  1
             done = True
         else:
-            reward = -1
+            reward += -0.01
             done = False
         
         return next_state, reward, done
@@ -105,24 +108,36 @@ class DQNAgent:
             q_values = self.model(state)
             return np.argmax(q_values.detach().numpy())
         
-def train(agent, env, num_episodes, batch_size):
-    for episode in range(num_episodes):
-        state = env.reset()
-        epsilon = 1.0-episode/num_episodes
-        # reward = 0
-        done = False
-        state_list=[]
-
-        while not done:
-            action = agent.select_action(state,epsilon)
-            next_state, reward, done = env.move(state, action)
-            agent.replay_buffer.push(state, action, reward, next_state, done)
-            loss = agent.update_model(batch_size)
-            state = next_state
-            state_list.append(next_state)
+    def sort_action(self, state):
+        state = torch.FloatTensor(state).unsqueeze(0)
+        q_values = self.model(state)
+        return np.argsort(q_values.detach().numpy().squeeze())[::1]
         
-        print(f'에피소드: {episode}, state: {state}, 보상: {reward}, Loss: {loss}')
-        # print(state_list)
+def train(agent, env, num_episodes, batch_size):
+    if os.path.exists('training_log.txt'):
+        os.remove('training_log.txt')
+    with open('training_log.txt', 'a') as file:
+        for episode in range(num_episodes):
+            state = env.reset()
+            epsilon = 1.0-episode/num_episodes
+            # reward = 0
+            done = False
+            state_list=[]
+            reward = 0.0
+
+            while not done:
+                action = agent.select_action(state,epsilon)
+                next_state, reward, done = env.move(state, action, reward)
+                agent.replay_buffer.push(state, action, reward, next_state, done)
+                loss = agent.update_model(batch_size)
+                state = next_state
+                state_list.append(next_state)
+
+            file.write(f'에피소드: {episode}, state: {state}, 보상: {reward}, Loss: {loss}\n')
+            print(f'에피소드: {episode}, state: {state}, 보상: {reward}, Loss: {loss}')
+            if reward == 100:
+                print("Find!!!!!!!!!!!!!!!!!!!!!!!!")
+                time.sleep(5)
 
 def save_model(model, file_name):
     torch.save(model.state_dict(), file_name)
@@ -131,31 +146,41 @@ def load_model(model, file_name):
     model.load_state_dict(torch.load(file_name))
     model.eval()
 
-def find_optimal_path(env, agent, start_state):
-    state = start_state
-    optimal_path = [state]
-    action_path = []
-    done = False
-    while not done and state != env.end_state:
-        action = agent.select_action(state, epsilon=0)
-        next_state, _, done = env.move(action)
-        if not done:
-            action_path.append(action)
-            optimal_path.append(next_state)
-        state = next_state
-    return optimal_path, action_path
-
 input_size = 2
 output_size = 4
 hidden_size = 128
 batch_size = 64
-num_episodes = 30000
+num_episodes = 5000000
 
 env = GridSetting()
 agent = DQNAgent(input_size, output_size, hidden_size)
 train(agent, env, num_episodes, batch_size)
 
 save_model(agent.model, 'dqn_test_model.pth')
+
+# def find_optimal_path(env, agent, start_state):
+#     visited = set()
+#     state = start_state
+#     optimal_path = [start_state]
+#     action_path = []
+    
+#     visited.add(state)
+#     for i in range(0,len(env.avoid)):
+#         visited.add(env.avoid[i])
+#     while state != env.end_state:
+#         action = agent.sort_action(state)
+#         for i in action:
+#             next_state, _, done = env.move(state, i)
+#             if next_state in visited:
+#                 continue
+#             else:
+#                 optimal_path.append(next_state)
+#                 visited.add(next_state)
+#                 action_path.append(action_set[i])
+#                 state = next_state
+#                 break
+#     optimal_path.append(env.end_state)
+#     return optimal_path, action_path
 
 # action_set = {
 #     0: 'u',
@@ -166,7 +191,7 @@ save_model(agent.model, 'dqn_test_model.pth')
 
 # env = GridSetting()
 # new_agent = DQNAgent(input_size, output_size, hidden_size)
-# load_model(new_agent.model, 'dqn_test_model.pth')
+# load_model(new_agent.model, 'dqn_model.pth')
 
 # optimal_path, action_path= find_optimal_path(env, new_agent, env.start_state)
 # print(f'최적의 경로: {optimal_path,action_path}')

@@ -103,7 +103,7 @@ class DQNAgent:
             q_values = self.model(state)
             return np.argmax(q_values.detach().numpy())
     def sort_action(self, state):
-        state = torch.FloatTensor(state).unsqueeze(0)  # state를 tensor로 변환하고 배치 차원을 추가
+        state = torch.FloatTensor(state).unsqueeze(0)
         q_values = self.model(state)
         return np.argsort(q_values.detach().numpy().squeeze())[::1]
         
@@ -151,10 +151,8 @@ def find_optimal_path(env, agent, start_state):
     visited.add(state)
     for i in range(0,len(env.avoid)):
         visited.add(env.avoid[i])
-        print(visited)
     while state != env.end_state:
         action = agent.sort_action(state)
-        print(state)
         for i in action:
             next_state, _, done = env.move(state, i)
             if next_state in visited:
@@ -177,7 +175,7 @@ action_set = {
 
 env = GridSetting()
 new_agent = DQNAgent(input_size, output_size, hidden_size)
-load_model(new_agent.model, 'dqn_test_model.pth')
+load_model(new_agent.model, 'dqn_model.pth')
 
 optimal_path, action_path= find_optimal_path(env, new_agent, env.start_state)
 print(f'최적의 경로: {optimal_path,action_path}')
