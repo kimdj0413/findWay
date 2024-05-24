@@ -39,13 +39,13 @@ class GridSetting:
         next_state = (x,y)
 
         if next_state in self.avoid:
-            reward += -0.1
+            reward += -1
             done = False
         elif next_state == self.end_state:
             reward +=  1
             done = True
         else:
-            reward += -0.001
+            reward += -0.02
             done = False
         
         return next_state, reward, done
@@ -143,8 +143,9 @@ def train(agent, env, num_episodes, batch_size):
                     if next_state not in visited:
                         visited.add(next_state)
                         break
-                    cnt += 1
-                    if cnt > 5:
+                    else :
+                        cnt += 1
+                    if cnt > 4:
                         action = env.force_togo
                         break
                 cnt = 0
@@ -169,50 +170,50 @@ hidden_size = 128
 batch_size = 64
 num_episodes = 10000
 
-env = GridSetting()
-agent = DQNAgent(input_size, output_size, hidden_size)
-train(agent, env, num_episodes, batch_size)
-
-save_model(agent.model, 'dqn_test_model.pth')
-
-# def find_optimal_path(env, agent, start_state):
-#     visited = set()
-#     state = start_state
-#     optimal_path = [start_state]
-#     action_path = []
-    
-#     visited.add(state)
-#     for i in range(0,len(env.avoid)):
-#         visited.add(env.avoid[i])
-#     while state != env.end_state:
-#         action = agent.sort_action(state)
-#         for i in action:
-#             next_state, _, done = env.move(state, i,0)
-#             # print(visited)
-#             if next_state in visited:
-#                 continue
-#             else:
-#                 optimal_path.append(next_state)
-#                 visited.add(next_state)
-#                 action_path.append(action_set[i])
-#                 state = next_state
-#                 break
-#     optimal_path.append(env.end_state)
-#     return optimal_path, action_path
-
-# action_set = {
-#     0: 'u',
-#     1: 'd',
-#     2: 'l',
-#     3: 'r',
-# }
-
 # env = GridSetting()
-# new_agent = DQNAgent(input_size, output_size, hidden_size)
-# load_model(new_agent.model, 'dqn_test_model.pth')
+# agent = DQNAgent(input_size, output_size, hidden_size)
+# train(agent, env, num_episodes, batch_size)
 
-# optimal_path, action_path= find_optimal_path(env, new_agent, env.start_state)
-# print(f'최적의 경로: {optimal_path,action_path}')
+# save_model(agent.model, 'dqn_test_model.pth')
+
+def find_optimal_path(env, agent, start_state):
+    visited = set()
+    state = start_state
+    optimal_path = [start_state]
+    action_path = []
+    
+    visited.add(state)
+    for i in range(0,len(env.avoid)):
+        visited.add(env.avoid[i])
+    while state != env.end_state:
+        action = agent.sort_action(state)
+        for i in action:
+            next_state, _, done = env.move(state, i,0)
+            if next_state in visited:
+                continue
+            else:
+                optimal_path.append(next_state)
+                visited.add(next_state)
+                action_path.append(action_set[i])
+                state = next_state
+                print(optimal_path)
+                break
+    optimal_path.append(env.end_state)
+    return optimal_path, action_path
+
+action_set = {
+    0: 'u',
+    1: 'd',
+    2: 'l',
+    3: 'r',
+}
+
+env = GridSetting()
+new_agent = DQNAgent(input_size, output_size, hidden_size)
+load_model(new_agent.model, 'dqn_test_model.pth')
+
+optimal_path, action_path= find_optimal_path(env, new_agent, env.start_state)
+print(f'최적의 경로: {optimal_path,action_path}')
 
 sec = time.time()-start_time
 times = str(datetime.timedelta(seconds=sec))

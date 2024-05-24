@@ -3,9 +3,26 @@ import random
 import matplotlib.pyplot as plt
 import time
 import datetime
+from PIL import Image
 
 start = time.time()
-# 그리드 크기
+def image_to_grid(image_path, grid_size=(100, 100)):
+    image = Image.open(image_path).convert('L')
+    image = image.resize(grid_size)
+    
+    image_array = np.array(image)
+    
+    threshold = 128
+    grid = (image_array < threshold).astype(int)
+    
+    return grid
+
+grid = image_to_grid('test_map.jpg')
+must_avoid=[]
+for i in range(0,100):
+    for j in range(0,100):
+        if grid[i][j] == 1 :
+            must_avoid.append((i,j))
 grid_size_x = 100
 grid_size_y = 100
 
@@ -13,20 +30,20 @@ grid_size_y = 100
 Q = np.zeros((grid_size_x, grid_size_y, 4))
 alpha = 0.5
 gamma = 0.9  
-epsilon = 0.7
-episodes = 13000
+# epsilon = 0.7
+episodes = 50000
 
-start_point = (0, 0)
-goal_point = (grid_size_x-1,grid_size_y-1)
-# must_avoid = [(9, 8), (3, 6), (8, 2), (15, 9), (13, 18), (18, 13), (2, 8), (14, 8), (4, 18), (12, 10), (4, 10), (4, 11), (18, 3), (3, 2), (5, 11), (19, 3), (15, 4), (9, 12), (13, 16), (14, 3), (14, 7), (1, 1), (4, 2), (14, 17), (19, 8), (1, 11), (13, 19), (2, 17), (11, 15), (0, 11), (19, 4), (10, 10), (13, 12), (19, 18), (10, 1), (18, 15), (13, 3), (4, 6), (6, 6), (5, 12), (5, 16), (19, 10), (9, 10), (15, 17), (5, 15), (2, 3), (5, 18), (3, 7), (1, 13), (4, 15)]
-must_avoid=[]
-random_cnt=3000
-while len(must_avoid) < random_cnt:
-    x = random.randint(0, grid_size_x-1)
-    y = random.randint(0, grid_size_y-1)
+start_point = (2, 15)
+goal_point = (63,93)
+# must_avoid = [(0,5),(0,6),(0,7),(0,8),(0,9),(1,0),(1,1),(1,2),(1,5),(1,6),(1,7),(1,8),(1,9),(2,0),(2,1),(2,2),(2,5),(2,6),(2,7),(2,8),(2,9),(3,0),(3,1),(3,2),(3,5),(3,6),(3,7),(3,8),(3,9),(4,9),(5,4),(5,5),(5,6),(5,7),(5,9),(6,0),(6,1),(6,2),(6,4),(6,5),(6,6),(6,7),(7,0),(7,1),(7,2),(8,0),(8,1),(8,2),(8,5),(8,6),(8,7),(9,5),(9,6),(9,7)]
+\
+# random_cnt=5000
+# while len(must_avoid) < random_cnt:
+#     x = random.randint(0, grid_size_x-1)
+#     y = random.randint(0, grid_size_y-1)
     
-    if ((x, y) not in must_avoid) or ((x,y) != (0,0)) or ((x,y) != (grid_size_x,grid_size_y)):
-        must_avoid.append((x, y))
+#     if ((x, y) not in must_avoid) or ((x,y) != (0,0)) or ((x,y) != (grid_size_x,grid_size_y)):
+#         must_avoid.append((x, y))
 # 보상 테이블 초기화
 R = np.full((grid_size_x, grid_size_y), -5)
 R[goal_point] = 1000000
@@ -51,7 +68,10 @@ def next_state(state, action):
 
 # Q-Learning 알고리즘
 for episode in range(episodes):
+    epsilon = max(0.1, 1.0 - episode / episodes)
     state = start_point
+    rewards=0
+    steps=0
     while state != (goal_point):
         if np.random.rand() < epsilon:
             action = np.random.choice(actions)
@@ -65,7 +85,11 @@ for episode in range(episodes):
             reward + gamma * np.max(Q[next_state_[0], next_state_[1]]) - Q[state[0], state[1], actions.index(action)])
 
         state = next_state_
-    print(f"Episode: {episode}, Reward: {reward}")
+        rewards+=reward/100000000
+        steps+=1
+        if steps>100000:
+            break
+    print(f"Episode: {episode}, Reward: {rewards:.2f}, Steps: {steps}")
 
 sec = time.time()-start
 times = str(datetime.timedelta(seconds=sec))
