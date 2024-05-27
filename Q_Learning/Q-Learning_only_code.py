@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 import time
 import datetime
 from PIL import Image
+from numba import jit, njit, int32, float32
 
 start = time.time()
-def image_to_grid(image_path, grid_size=(960, 500)):
+def image_to_grid(image_path, grid_size=(480, 250)):
     image = Image.open(image_path).convert('L')
     image = image.resize(grid_size)
     
@@ -14,29 +15,31 @@ def image_to_grid(image_path, grid_size=(960, 500)):
     
     threshold = 200
     grid = (image_array < threshold).astype(int)
-    
+
+    print(grid)
+
     return grid
 
 grid = image_to_grid('map.jpg')
 must_avoid=[]
-for i in range(0,500):
-    for j in range(0,960):
+for i in range(0,250):
+    for j in range(0,480):
         if grid[i][j] == 1 :
             must_avoid.append((i,j))
-grid_size_x = 500
-grid_size_y = 960
+grid_size_x = 250
+grid_size_y = 480
 
 # Q-테이블 초기화
 Q = np.zeros((grid_size_x, grid_size_y, 4))
-alpha = 0.5
+# alpha = 0.5
 gamma = 0.9  
 # epsilon = 0.7
 episodes = 100000
 
-start_point = (3, 24)
-goal_point = (488,946)
+start_point = (2, 12)
+goal_point = (244,473)
 # must_avoid = [(0,5),(0,6),(0,7),(0,8),(0,9),(1,0),(1,1),(1,2),(1,5),(1,6),(1,7),(1,8),(1,9),(2,0),(2,1),(2,2),(2,5),(2,6),(2,7),(2,8),(2,9),(3,0),(3,1),(3,2),(3,5),(3,6),(3,7),(3,8),(3,9),(4,9),(5,4),(5,5),(5,6),(5,7),(5,9),(6,0),(6,1),(6,2),(6,4),(6,5),(6,6),(6,7),(7,0),(7,1),(7,2),(8,0),(8,1),(8,2),(8,5),(8,6),(8,7),(9,5),(9,6),(9,7)]
-\
+
 # random_cnt=5000
 # while len(must_avoid) < random_cnt:
 #     x = random.randint(0, grid_size_x-1)
@@ -45,10 +48,10 @@ goal_point = (488,946)
 #     if ((x, y) not in must_avoid) or ((x,y) != (0,0)) or ((x,y) != (grid_size_x,grid_size_y)):
 #         must_avoid.append((x, y))
 # 보상 테이블 초기화
-R = np.full((grid_size_x, grid_size_y), -1)
-R[goal_point] = 300000
+R = np.full((grid_size_x, grid_size_y), -0.1)
+R[goal_point] = 100000
 for i in must_avoid:
-    R[i] = -500000
+    R[i] = -30000
 
 # 가능한 행동 정의
 actions = ["up", "down", "left", "right"]
@@ -69,6 +72,7 @@ def next_state(state, action):
 # Q-Learning 알고리즘
 for episode in range(episodes):
     epsilon = max(0.1, 1.0 - episode / episodes)
+    alpha = max(0.1, 0.8 - episode / episodes)
     state = start_point
     rewards=0
     steps=0
@@ -87,7 +91,7 @@ for episode in range(episodes):
         state = next_state_
         rewards+=reward/100000000
         steps+=1
-        if steps>1000000:
+        if steps>300000:
             break
     print(f"Episode: {episode}, Reward: {rewards:.2f}, Steps: {steps}")
 

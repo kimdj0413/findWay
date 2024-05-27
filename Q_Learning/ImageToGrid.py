@@ -2,7 +2,7 @@ from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 
-def image_to_grid(image_path, grid_size=(960, 500)):
+def image_to_grid(image_path, grid_size=(480, 250)):
     # 이미지 읽어오기
     image = Image.open(image_path).convert('L')  # 이미지를 흑백으로 변환
     image = image.resize(grid_size)  # 이미지를 100x100 크기로 리사이즈
@@ -25,6 +25,6 @@ print(grid)
 
 # 그리드를 메모장 파일로 저장
 output_file_path = 'map.txt'
-np.savetxt(output_file_path, grid, fmt='%d')
+np.savetxt(output_file_path, grid)
 
 print(f"그리드가 {output_file_path} 파일에 저장되었습니다.")
