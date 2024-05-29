@@ -14,10 +14,10 @@ action_set = {
     3: 'r',
 }
 
-grid_size_x = 5
-grid_size_y = 5
+grid_size_x = 10
+grid_size_y = 10
 gamma = 0.9
-epsilon = 1.0
+# epsilon = 1.0
 epochs = 10000
 batch_size = 32
 random_cnt = 3
@@ -31,16 +31,17 @@ l4 = 4
 # l7 = 4
 start=(0,0)
 goal=(grid_size_x-1,grid_size_y-1)
-avoid = []
-while len(avoid) < random_cnt:
-    x = random.randint(0, grid_size_x-1)
-    y = random.randint(0, grid_size_y-1)
-    
-    if ((x, y) not in avoid) and ((x,y) != (0,0)) and ((x,y) != (grid_size_x-1,grid_size_y-1)):
-        avoid.append((x, y))
+avoid = [(0,5),(0,6),(0,7),(0,8),(0,9),(1,0),(1,1),(1,2),(1,5),(1,6),(1,7),(1,8),(1,9),(2,0),(2,1),(2,2),(2,5),(2,6),(2,7),(2,8),(2,9),(3,0),(3,1),(3,2),(3,5),(3,6),(3,7),(3,8),(3,9),(4,9),(5,4),(5,5),(5,6),(5,7),(5,9),(6,0),(6,1),(6,2),(6,4),(6,5),(6,6),(6,7),(7,0),(7,1),(7,2),(8,0),(8,1),(8,2),(8,5),(8,6),(8,7),(9,5),(9,6),(9,7)]
 
-print(avoid)
-input("Enter")
+# while len(avoid) < random_cnt:
+#     x = random.randint(0, grid_size_x-1)
+#     y = random.randint(0, grid_size_y-1)
+    
+#     if ((x, y) not in avoid) and ((x,y) != (0,0)) and ((x,y) != (grid_size_x-1,grid_size_y-1)):
+#         avoid.append((x, y))
+
+# print(avoid)
+# input("Enter")
 
 model = torch.nn.Sequential(
         torch.nn.Linear(l1,l2),
@@ -91,11 +92,11 @@ def gridMove(current_state, state1, action):
 
 def reward_state(current_state):
     if current_state==(0, goal[0], goal[1]):
-        return 3000
+        return 200
     elif (current_state[1], current_state[2]) in avoid:
-        return -1000
+        return -100
     else:
-        return -10
+        return -0.1
 
 current_state=(0,start[0],start[1])
 num_cnt=[]
@@ -104,6 +105,7 @@ model = model.to(device)
 # loss_cnt = deque(maxlen=100)
 
 for i in range(epochs):
+    epsilon = max(0.1, 1.0-i/epochs)
     state1 = stateMake(grid_size_x, grid_size_y)
     state1 = torch.tensor(state1, dtype=torch.float32).to(device)
     status=1
@@ -134,8 +136,8 @@ for i in range(epochs):
 
         Y = torch.tensor([Y], device=device, dtype=torch.float32).detach()
         X = qval.squeeze()[action_]
-        loss = loss_fn(X, Y)
-        print(i, loss.item())
+        loss = loss_fn(X, Y)/1000
+        print(f'episodes :{i} , loss :{loss.item()}')
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -149,7 +151,7 @@ for i in range(epochs):
 
     if epsilon > 0.1:
         epsilon -= (1/epochs)
-    print(i)
+    # print(i)
 
 def find_optimal_path(model, start, goal, grid_size_x, grid_size_y, avoid):
     visited = set()

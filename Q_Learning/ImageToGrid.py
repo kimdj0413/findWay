@@ -2,7 +2,7 @@ from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 
-def image_to_grid(image_path, grid_size=(480, 250)):
+def image_to_grid(image_path, grid_size=(30, 30)):
     # 이미지 읽어오기
     image = Image.open(image_path).convert('L')  # 이미지를 흑백으로 변환
     image = image.resize(grid_size)  # 이미지를 100x100 크기로 리사이즈
@@ -20,9 +20,14 @@ def image_to_grid(image_path, grid_size=(480, 250)):
     return grid
 
 # 사용 예시
-grid = image_to_grid('map.jpg')
-print(grid)
-
+grid = image_to_grid('test_map.jpg')
+# print(grid)
+avoid=[]
+for i in range(0,30):
+    for j in range(0,30):
+        if grid[i][j] == 1 :
+            avoid.append((i,j))
+print(len(avoid))
 # 그리드를 메모장 파일로 저장
 output_file_path = 'map.txt'
 np.savetxt(output_file_path, grid)

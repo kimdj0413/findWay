@@ -6,17 +6,16 @@ import torch.nn as nn
 import torch.optim as optim
 import time
 import datetime
-import torch.nn.functional as F
+import matplotlib.pyplot as plt
+from PIL import Image
 
 start_time = time.time()
 class GridSetting:
     def __init__(self):
-        # self.grid_size_x = 10
-        # self.grid_size_y = 10
-        # self.avoid = [(0,5),(0,6),(0,7),(0,8),(0,9),(1,0),(1,1),(1,2),(1,5),(1,6),(1,7),(1,8),(1,9),(2,0),(2,1),(2,2),(2,5),(2,6),(2,7),(2,8),(2,9),(3,0),(3,1),(3,2),(3,5),(3,6),(3,7),(3,8),(3,9),(4,9),(5,4),(5,5),(5,6),(5,7),(5,9),(6,0),(6,1),(6,2),(6,4),(6,5),(6,6),(6,7),(7,0),(7,1),(7,2),(8,0),(8,1),(8,2),(8,5),(8,6),(8,7),(9,5),(9,6),(9,7)]
-        self.grid_size_x = 5
-        self.grid_size_y = 5
-        self.avoid = [(0,1),(1,1),(1,3),(2,3),(3,0),(3,1),(3,2),(3,3),(4,1),(4,2)]
+        self.grid_size_x = 10
+        self.grid_size_y = 10
+        self.avoid = [(0,5),(0,6),(0,7),(0,8),(0,9),(1,0),(1,1),(1,2),(1,5),(1,6),(1,7),(1,8),(1,9),(2,0),(2,1),(2,2),(2,5),(2,6),(2,7),(2,8),(2,9),(3,0),(3,1),(3,2),(3,5),(3,6),(3,7),(3,8),(3,9),(4,9),(5,4),(5,5),(5,6),(5,7),(5,9),(6,0),(6,1),(6,2),(6,4),(6,5),(6,6),(6,7),(7,0),(7,1),(7,2),(8,0),(8,1),(8,2),(8,5),(8,6),(8,7),(9,5),(9,6),(9,7)]
+        # self.avoid = [(0,1),(1,1),(1,3),(2,3),(3,0),(3,1),(3,2),(3,3),(4,1),(4,2)]
         self.start_state = (0,0)
         self.force_togo = 3
         self.end_state = (self.grid_size_x-1,self.grid_size_y-1)
@@ -42,7 +41,7 @@ class GridSetting:
             reward += -1
             done = False
         elif next_state == self.end_state:
-            reward +=  1
+            reward += 1
             done = True
         else:
             reward += -0.02
@@ -92,7 +91,8 @@ class DQNAgent:
         dones = torch.FloatTensor(dones)
 
         current_q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
-        next_q_values = self.model(next_states).max(1)[0]
+        with torch.no_grad():
+            next_q_values = self.model(next_states).max(1)[0]
         expected_q_values = rewards + self.gamma * next_q_values * (1 - dones)
 
         loss = nn.SmoothL1Loss()(current_q_values, expected_q_values.detach())
@@ -123,13 +123,14 @@ class DQNAgent:
         state = torch.FloatTensor(state).unsqueeze(0)
         q_values = self.model(state)
         return np.argsort(q_values.detach().numpy().squeeze())[::1]
-        
+losses=[]
+loss_cnt=[]   
 def train(agent, env, num_episodes, batch_size):
     with open('training_log.txt', 'w') as file:
         for episode in range(num_episodes):
             state = env.reset()
             visited=set()
-            epsilon = max(0.1, 1.0 - episode / num_episodes)#1.0-episode/num_episodes
+            epsilon = max(0.001, 1.0 - episode / num_episodes)#1.0-episode/num_episodes
             done = False
             state_list=[]
             reward = 0.0
@@ -153,9 +154,14 @@ def train(agent, env, num_episodes, batch_size):
                 loss = agent.update_model(batch_size)
                 state = next_state
                 state_list.append(next_state)
-
-            file.write(f'에피소드: {episode}, state: {state}, 보상: {reward*10:.2f}, Loss: {loss}\n')
-            print(f'에피소드: {episode}, state: {state}, 보상: {reward*10:.2f}, Loss: {loss}')
+            if loss is not None:
+                    loss = loss/100
+            else:
+                loss = 0
+            losses.append(loss)
+            loss_cnt.append(episode)
+            file.write(f'에피소드: {episode}, Loss: {loss:.2f}\n')
+            print(f'에피소드: {episode}, Loss: {loss:.2f}')
            
 def save_model(model, file_name):
     torch.save(model.state_dict(), file_name)
@@ -168,13 +174,13 @@ input_size = 2
 output_size = 4
 hidden_size = 128
 batch_size = 64
-num_episodes = 10000
+num_episodes = 1000
 
-# env = GridSetting()
-# agent = DQNAgent(input_size, output_size, hidden_size)
-# train(agent, env, num_episodes, batch_size)
+env = GridSetting()
+agent = DQNAgent(input_size, output_size, hidden_size)
+train(agent, env, num_episodes, batch_size)
 
-# save_model(agent.model, 'dqn_test_model.pth')
+save_model(agent.model, 'dqn_test_model.pth')
 
 def find_optimal_path(env, agent, start_state):
     visited = set()
@@ -196,7 +202,7 @@ def find_optimal_path(env, agent, start_state):
                 visited.add(next_state)
                 action_path.append(action_set[i])
                 state = next_state
-                print(optimal_path)
+                # print(optimal_path)
                 break
     optimal_path.append(env.end_state)
     return optimal_path, action_path
@@ -208,7 +214,6 @@ action_set = {
     3: 'r',
 }
 
-env = GridSetting()
 new_agent = DQNAgent(input_size, output_size, hidden_size)
 load_model(new_agent.model, 'dqn_test_model.pth')
 
@@ -219,3 +224,53 @@ sec = time.time()-start_time
 times = str(datetime.timedelta(seconds=sec))
 short = times.split(".")[0]
 print(f"{short} sec")
+
+# 그림 그리기
+plt.ion()
+# 손실 함수 그리기
+fig2, ax2 = plt.subplots()
+
+loss_x = loss_cnt
+loss_y = losses
+
+ax2.plot(loss_x, loss_y)
+ax2.set_title('losses Graph')
+ax2.set_xlabel('Episodes')
+ax2.set_ylabel('Losses')
+
+plt.show()
+
+fig1, ax1 = plt.subplots()
+
+for x in range(env.grid_size_x + 1):
+    ax1.axhline(x, lw=2, color='k', zorder=5)
+for y in range(env.grid_size_y + 1):
+    ax1.axvline(y, lw=2, color='k', zorder=5)
+
+ax1.set_xticks(np.arange(env.grid_size_x + 1))
+ax1.set_yticks(np.arange(env.grid_size_y + 1))
+ax1.set_xticklabels([])
+ax1.set_yticklabels([])
+ax1.grid(True)
+
+for j in range(len(env.avoid)):
+    ax1.add_patch(plt.Rectangle((env.avoid[j][1], env.avoid[j][0]), 1, 1, color='red', alpha=0.5))
+
+for x in range(env.grid_size_x):
+    for y in range(env.grid_size_y):
+        ax1.text(y + 0.5, x + 0.5, f'({x},{y})', ha='center', va='center', fontsize=5)
+
+ax1.text(env.start_state[1] + 0.1, env.start_state[0] + 1 - 0.1, 'Start', ha='left', va='bottom', fontweight='bold', fontsize=7, color='blue', zorder=10)
+ax1.text(env.end_state[1] + 0.1, env.end_state[0] + 1 - 0.1, 'Goal', ha='left', va='bottom', fontweight='bold', fontsize=7, color='red', zorder=10)
+
+for i in range(len(optimal_path) - 1):
+    start = optimal_path[i]
+    end = optimal_path[i + 1]
+    ax1.plot([start[1] + 0.5, end[1] + 0.5], [start[0] + 0.5, end[0] + 0.5], 'o-', color='green', lw=1, markersize=3, zorder=10)
+
+plt.gca().invert_yaxis()
+plt.axis('equal')
+# plt.savefig("DQN_vector.svg", format="svg")
+plt.show()
+
+input("Enter")
